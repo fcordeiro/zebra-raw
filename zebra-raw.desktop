@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Zebra RAW
+Comment=Enviar ZPL à Zebra GC420t por USB
+Exec=zebra-raw
+Icon=printer
+Terminal=false
+Categories=Utility;
+Keywords=Zebra;ZPL;RAW;GC420t;impressora;
+StartupNotify=true

@@ -1,0 +1,50 @@
+name: Testar e empacotar
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deb:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image: ['debian:13', 'ubuntu:24.04']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gerar, instalar, testar e remover DEB
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: |
+          docker run --rm -v "$PWD:/src:z" -w /src "$IMAGE" sh -ec '
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y dpkg-dev python3 python3-gi gir1.2-gtk-3.0 cups-client xvfb desktop-file-utils
+            ./scripts/build-deb.sh
+            apt-get install -y --no-install-recommends ./dist/zebra-raw_$(cat VERSION)_all.deb
+            ./scripts/check-package.sh
+            apt-get remove -y zebra-raw
+            test ! -e /usr/bin/zebra-raw
+          '
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb-${{ strategy.job-index }}
+          path: dist/*.deb
+  rpm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Gerar, instalar, testar e remover RPM
+        run: |
+          docker run --rm -v "$PWD:/src:z" -w /src opensuse/tumbleweed sh -ec '
+            zypper --non-interactive install rpm-build tar gzip python3-gobject typelib-1_0-Gtk-3_0 cups-client xorg-x11-server-Xvfb desktop-file-utils
+            ./scripts/build-rpm.sh
+            zypper --non-interactive install --allow-unsigned-rpm ./dist/zebra-raw-$(cat VERSION)-1.noarch.rpm
+            ./scripts/check-package.sh
+            zypper --non-interactive remove zebra-raw
+            test ! -e /usr/bin/zebra-raw
+          '
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm-opensuse
+          path: dist/*.rpm
