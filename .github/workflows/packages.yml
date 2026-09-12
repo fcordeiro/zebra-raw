@@ -37,7 +37,7 @@ jobs:
       - name: Gerar, instalar, testar e remover RPM
         run: |
           docker run --rm -v "$PWD:/src:z" -w /src opensuse/tumbleweed sh -ec '
-            zypper --non-interactive install appstream rpm-build tar gzip python3-gobject typelib-1_0-Gtk-3_0 cups-client xorg-x11-server-Xvfb desktop-file-utils
+            zypper --non-interactive install AppStream rpm-build tar gzip python3-gobject typelib-1_0-Gtk-3_0 cups-client xorg-x11-server-Xvfb desktop-file-utils
             ./scripts/build-rpm.sh
             zypper --non-interactive install --allow-unsigned-rpm ./dist/zebra-raw-$(cat VERSION)-1.noarch.rpm
             ./scripts/check-package.sh
