@@ -2,7 +2,7 @@
 import sys
 sys.path.insert(0, '/usr/share/zebra-raw')
 import core
-core.printers = lambda: [('Zebra', 'usb://Zebra/GC420t')]
+core.printers = lambda: [('Zebra', 'usb://Zebra/ZD421')]
 from zebra import Window
 from gi.repository import GLib, Gtk
 window = Window()

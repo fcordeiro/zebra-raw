@@ -1,10 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Zebra RAW
-Comment=Enviar ZPL à Zebra GC420t por USB
+Comment=Enviar ZPL RAW para impressoras térmicas Zebra por USB
 Exec=zebra-raw
-Icon=printer
+Icon=zebra-raw
 Terminal=false
 Categories=Utility;
-Keywords=Zebra;ZPL;RAW;GC420t;impressora;
+Keywords=Zebra;ZPL;RAW;impressora;térmica;
 StartupNotify=true
+StartupWMClass=Zebra RAW

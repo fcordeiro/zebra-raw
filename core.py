@@ -1,4 +1,4 @@
-"""GC420t: geração de comandos e transporte CUPS sem filtros."""
+"""Geração de ZPL e transporte RAW pelo CUPS para impressoras Zebra."""
 import json
 import os
 import re
@@ -14,6 +14,7 @@ class Settings:
     length: float = 150
     method: str = 'T'
     media: str = 'Y'
+    resolution: int = 8
     speed: int = 2
     darkness: int = 10
     top: int = 0
@@ -21,19 +22,23 @@ class Settings:
     tear: int = 0
 
     def validate(self):
-        for key, low, high in [('width', 1, 104), ('length', 1, 990), ('speed', 2, 4), ('darkness', 0, 30), ('top', -120, 120), ('left', -9999, 9999), ('tear', -120, 120)]:
+        for key, low, high in [('width', 1, 1000), ('length', 1, 1000), ('speed', 1, 14), ('darkness', 0, 30), ('top', -120, 120), ('left', -9999, 9999), ('tear', -120, 120)]:
             value = getattr(self, key)
             if not low <= value <= high:
                 raise ValueError(f'{key}: valor deve estar entre {low} e {high}.')
             if key not in ('width', 'length') and int(value) != value:
                 raise ValueError(f'{key}: use um número inteiro.')
+        if self.resolution not in (8, 12, 24):
+            raise ValueError('Resolução inválida. Use 8, 12 ou 24 dots/mm.')
+        if round(self.width * self.resolution) > 32000 or round(self.length * self.resolution) > 32000:
+            raise ValueError('Largura ou comprimento excede 32000 dots.')
         if self.method not in ('T', 'D') or self.media not in ('Y', 'N', 'M', 'A'):
             raise ValueError('Método de impressão ou mídia inválidos.')
 
     def zpl(self, persist=False):
         self.validate()
         return (f'^XA^MT{self.method}^MN{self.media}^MMT'
-                f'^PW{round(self.width * 8)}^LL{round(self.length * 8)}'
+                f'^PW{round(self.width * self.resolution)}^LL{round(self.length * self.resolution)}'
                 f'^PR{self.speed}~SD{self.darkness:02d}^LT{self.top}^LS{self.left}'
                 f'~TA{self.tear}' + ('^JUS' if persist else '') + '^XZ\n').encode('ascii')
 
@@ -51,11 +56,79 @@ def run(args, data=None):
     return result.stdout.decode(errors='replace').strip()
 
 
+def _windows_printing():
+    try:
+        import win32print
+        return win32print
+    except ImportError as e:
+        raise RuntimeError('O suporte de impressão do Windows não está disponível.') from e
+
+
+def _windows_printers():
+    win32print = _windows_printing()
+    flags = win32print.PRINTER_ENUM_LOCAL | win32print.PRINTER_ENUM_CONNECTIONS
+    rows = []
+    for info in win32print.EnumPrinters(flags, None, 2):
+        name = info['pPrinterName']
+        identity = ' '.join(str(info.get(key) or '') for key in ('pPrinterName', 'pDriverName', 'pPortName'))
+        if 'zebra' in identity.lower():
+            rows.append((name, info.get('pPortName') or info.get('pDriverName') or 'Windows'))
+    return rows
+
+
+def _windows_submit(printer, data, title):
+    win32print = _windows_printing()
+    handle = win32print.OpenPrinter(printer)
+    try:
+        job = win32print.StartDocPrinter(handle, 1, (title, None, 'RAW'))
+        win32print.StartPagePrinter(handle)
+        try:
+            win32print.WritePrinter(handle, data)
+        finally:
+            win32print.EndPagePrinter(handle)
+        win32print.EndDocPrinter(handle)
+    finally:
+        win32print.ClosePrinter(handle)
+    return f'request id is {printer}-{job} (1 file(s))'
+
+
+def queue_status(printer):
+    if os.name != 'nt':
+        return run(['lpstat', '-p', printer, '-l']) + '\n\n' + run(['lpstat', '-o', printer])
+    win32print = _windows_printing()
+    handle = win32print.OpenPrinter(printer)
+    try:
+        jobs = win32print.EnumJobs(handle, 0, 100, 1)
+    finally:
+        win32print.ClosePrinter(handle)
+    if not jobs:
+        return f'Fila {printer}: sem trabalhos.'
+    return '\n'.join(f"{printer}-{job['JobId']}: {job.get('pDocument') or '(sem nome)'}" for job in jobs)
+
+
+def cancel_job(job):
+    if os.name != 'nt':
+        return run(['cancel', job])
+    try:
+        printer, job_id = job.rsplit('-', 1)
+        job_id = int(job_id)
+    except ValueError as e:
+        raise ValueError('Identificador de trabalho inválido.') from e
+    win32print = _windows_printing()
+    handle = win32print.OpenPrinter(printer)
+    try:
+        win32print.SetJob(handle, job_id, 0, None, win32print.JOB_CONTROL_CANCEL)
+    finally:
+        win32print.ClosePrinter(handle)
+
+
 def printers():
+    if os.name == 'nt':
+        return _windows_printers()
     rows = []
     for line in run(['lpstat', '-v']).splitlines():
         match = re.match(r'device for ([^:]+): (.+)', line)
-        if match and 'usb://' in match[2].lower() and ('gc420t' in match[2].lower()):
+        if match and 'usb://' in match[2].lower() and 'zebra' in match[2].lower():
             rows.append((match[1], match[2]))
     return rows
 
@@ -78,11 +151,13 @@ def read_zpl(path):
 
 def submit(printer, data, title, repeats=1):
     if printer not in dict(printers()):
-        raise ValueError('Selecione uma fila USB da GC420t disponível.')
+        raise ValueError('Selecione uma fila de impressora Zebra disponível.')
     if not 1 <= repeats <= 100:
         raise ValueError('Repetições devem estar entre 1 e 100.')
     if len(data) * repeats > 64 * 1024 * 1024:
         raise ValueError('Trabalho excede 64 MiB. Reduza as repetições.')
+    if os.name == 'nt':
+        return _windows_submit(printer, data * repeats, title)
     return run(['lp', '-d', printer, '-o', 'raw', '-o', 'job-sheets=none', '-t', title], data * repeats)
 
 

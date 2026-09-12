@@ -1,4 +1,4 @@
-# Zebra RAW — GC420t USB
+# Zebra RAW — impressoras térmicas Zebra USB
 
 Utilitário gráfico em português para Linux, Python 3 e GTK 3. Usa a fila CUPS existente e envia bytes com `lp -d FILA -o raw -o job-sheets=none`. Não precisa de servidor web, internet, privilégios administrativos ou bibliotecas pip.
 
@@ -26,13 +26,13 @@ Os instaladores geram e instalam um pacote nativo, resolvem dependências pelo g
 Os pacotes ficam em `dist/`. Para instalar um pacote já gerado:
 
 ```sh
-sudo apt install ./zebra-raw_1.0.0_all.deb
-sudo zypper install --allow-unsigned-rpm ./zebra-raw-1.0.0-1.noarch.rpm
+sudo apt install ./zebra-raw_1.2.0_all.deb
+sudo zypper install --allow-unsigned-rpm ./zebra-raw-1.2.0-1.noarch.rpm
 ```
 
 O RPM local não é assinado; a opção permite somente a instalação desse pacote sem assinatura, mantendo a verificação dos repositórios. Para remover: `sudo apt remove zebra-raw` ou `sudo zypper remove zebra-raw`. Os perfis pessoais são preservados. Atualizações são instaladas sobre a versão anterior pelo mesmo procedimento.
 
-Requisitos: Python 3.8+, PyGObject, GTK 3 e clientes CUPS. É preciso ter uma fila USB GC420t configurada no CUPS e permissão de impressão. O nome `(EPL)` anunciado pelo dispositivo não impede o uso de ZPL via RAW. A aplicação não usa rede externa; comunica-se com o serviço CUPS local.
+No Linux, os requisitos são Python 3.8+, PyGObject, GTK 3 e clientes CUPS. É preciso ter uma fila de impressora Zebra configurada e permissão de impressão. No Windows, o executável portátil usa a fila nativa do sistema. A aplicação trabalha com ZPL enviado em modo RAW; equipamentos configurados para EPL ou outro idioma precisam receber ZPL conforme a documentação do próprio modelo. A aplicação não usa rede externa.
 
 ### Gerar os pacotes sem instalar
 
@@ -45,9 +45,13 @@ Requisitos: Python 3.8+, PyGObject, GTK 3 e clientes CUPS. É preciso ter uma fi
 
 Pacotes independentes de arquitetura (`all` / `noarch`). O workflow do GitHub testa o código e a instalação em Debian, Ubuntu e openSUSE Tumbleweed, disponibilizando os pacotes como artefatos de execução. Nenhuma licença de redistribuição foi escolhida para este projeto.
 
+### Windows portátil
+
+O workflow **Testar e empacotar** também gera `Zebra-RAW.exe` para Windows. Baixe o artefato `windows-portable` da execução do GitHub Actions e execute o arquivo; ele é autocontido e não requer instalador, Python, GTK ou permissões de administrador no computador de destino. Para imprimir, basta que a impressora Zebra esteja instalada como uma fila do Windows.
+
 ## Imprimir
 
-1. Selecione a fila USB da GC420t.
+1. Selecione a fila da impressora Zebra.
 2. Escolha um `.zpl` ou `.txt` contendo um formato `^XA ... ^XZ`.
 3. Opcionalmente selecione o envio das configurações antes do arquivo.
 4. Clique em **Enviar arquivo RAW**.
@@ -58,14 +62,15 @@ Os bytes são preservados, inclusive codificação e finais de linha. A prévia 
 
 ## Configuração
 
-- Largura imprimível até 104 mm (832 dots), comprimento até 990 mm; resolução fixa de 8 dots/mm (203 dpi nominal).
+- Resolução selecionável: 203 dpi (8 dots/mm), 300 dpi (12 dots/mm) ou 600 dpi (24 dots/mm). Configure a que corresponde à sua impressora.
+- Largura e comprimento de 1 a 1.000 mm, limitados a 32.000 dots pelo ZPL. Confirme também os limites físicos do equipamento e da mídia.
 - Transferência térmica com ribbon (`^MTT`) ou térmico direto (`^MTD`).
 - Espaço/entalhe (`^MNY`), marca preta (`^MNM`), contínua (`^MNN`) ou detecção automática (`^MNA`).
-- Velocidade conservadora de 2, 3 ou 4 pol/s; limite do modelo: 4 pol/s.
+- Velocidade de 1 a 14 pol/s; selecione um valor suportado pelo seu modelo e pela mídia.
 - Intensidade 0–30, deslocamento vertical, posição à esquerda e destaque manual.
 - Modo de saída fixado em destaque manual (`^MMT`); sem corte, RFID, rede ou dispensador opcional.
 
-Largura é área de impressão, não largura do rolo com suporte. O ajuste não escala desenhos. O comprimento indicado é o da etiqueta, sem o espaço; mídia descontínua depende também da calibração do sensor. Ajustes em dots: 8 dots = 1 mm. Deslocamento à esquerda usa o sinal nativo de `^LS`.
+Largura é área de impressão, não largura do rolo com suporte. O ajuste não escala desenhos. O comprimento indicado é o da etiqueta, sem o espaço; mídia descontínua depende também da calibração do sensor. Ajustes em dots dependem da resolução selecionada. Deslocamento à esquerda usa o sinal nativo de `^LS`.
 
 **Salvar perfil local** grava apenas no computador, em `$XDG_CONFIG_HOME/zebra-raw/profiles.json` (normalmente `~/.config/zebra-raw/profiles.json`). Digite um nome novo para criar outro perfil. Carregar um perfil não envia comandos. O perfil inicial é um exemplo de 100 × 150 mm com ribbon; ajuste conforme o material instalado.
 
@@ -81,7 +86,7 @@ O utilitário não substitui comandos existentes nos arquivos: `^PW`, `^LL`, `^M
 - Estado e trabalhos da fila CUPS.
 - Cancelamento do último trabalho enviado nesta sessão. Dados já transmitidos à impressora não são recolhidos pelo cancelamento.
 
-A aceitação pelo CUPS não prova que a etiqueta saiu. Consulte o LED da GC420t e o relatório impresso para falhas físicas. Nenhuma ação de impressão é executada automaticamente ao iniciar.
+A aceitação pelo CUPS não prova que a etiqueta saiu. Consulte os indicadores da impressora e o relatório impresso para falhas físicas. Nenhuma ação de impressão é executada automaticamente ao iniciar.
 
 ## Validação
 
@@ -90,12 +95,8 @@ python3 -m unittest discover -s tests -v
 python3 -m py_compile core.py zebra.py
 ```
 
-Testes cobrem geração e limites, persistência opcional, preservação binária, transporte RAW, repetições e seleção exclusiva de filas USB GC420t. A janela GTK e a descoberta de uma fila USB real foram verificadas no ambiente de desenvolvimento. A impressão física e calibração precisam ser verificadas com o material carregado; não foram disparadas durante o desenvolvimento.
+Testes cobrem geração e limites, persistência opcional, preservação binária, transporte RAW, repetições e seleção de filas USB Zebra. A janela GTK e a descoberta de uma fila USB real foram verificadas no ambiente de desenvolvimento. A impressão física e calibração precisam ser verificadas com o material carregado; não foram disparadas durante o desenvolvimento.
 
 ## Referências
 
-- [Manual GC420t](https://www.zebra.com/content/dam/support-dam/en/documentation/unrestricted/guide/product/gc420t-ug-en.pdf)
-- [Especificações GC420](https://cpws.zebra.com/cpws/docs/gc420/gc420_specs.htm)
 - [CUPS — envio sem filtros](https://openprinting.github.io/cups/)
-
-O apêndice do manual contém exemplos genéricos de outros equipamentos (inclusive velocidades maiores). Este aplicativo limita a velocidade à especificação própria da GC420t e não expõe acessórios ausentes.

@@ -11,8 +11,9 @@ class CoreTests(unittest.TestCase):
         self.assertIn(b'^MTD^MNM^MMT',z)
         self.assertIn(b'^JUS',z)
         self.assertNotIn(b'^JUS',core.Settings().zpl())
+        self.assertIn(b'^PW1200^LL600', core.Settings(width=100, length=50, resolution=12).zpl())
     def test_limits(self):
-        for kw in [dict(width=105),dict(speed=5),dict(darkness=31),dict(length=float('nan')),dict(method='x')]:
+        for kw in [dict(width=1001),dict(speed=15),dict(darkness=31),dict(length=float('nan')),dict(resolution=10),dict(method='x')]:
             with self.assertRaises(ValueError):core.Settings(**kw).zpl()
     def test_raw_bytes(self):
         data=b'^XA\r\n^FO1,1^FD\xe7\xe3^FS^XZ\r\n'
@@ -21,7 +22,7 @@ class CoreTests(unittest.TestCase):
             self.assertEqual(core.read_zpl(p),data)
             p.write_bytes(b'ordinary text')
             with self.assertRaises(ValueError):core.read_zpl(p)
-    @patch('core.printers',return_value=[('Zebra','usb://GC420t')])
+    @patch('core.printers',return_value=[('Zebra','usb://Zebra/ZD421')])
     @patch('core.run',return_value='request id is Zebra-42 (1 file(s))')
     def test_transport(self,run,printers):
         data=b'^XA^FDhello^FS^PQ2^XZ'
@@ -31,7 +32,17 @@ class CoreTests(unittest.TestCase):
         self.assertIn('raw',args)
         self.assertEqual(args[-1],'a; $(bad)')
         with self.assertRaises(ValueError):core.submit('Canon',data,'x')
-    @patch('core.run',return_value='device for Canon: usb://Canon\ndevice for Zebra: usb://Zebra/ZTC%20GC420t%20(EPL)?serial=x')
+    @patch.object(core.os, 'name', 'nt')
+    @patch('core.printers', return_value=[('Zebra', 'Windows')])
+    def test_windows_transport(self, printers):
+        with patch('core._windows_printing') as printing:
+            api = printing.return_value
+            api.StartDocPrinter.return_value = 7
+            result = core.submit('Zebra', b'^XA^XZ', 'teste', 2)
+            self.assertEqual(result, 'request id is Zebra-7 (1 file(s))')
+            api.WritePrinter.assert_called_once_with(api.OpenPrinter.return_value, b'^XA^XZ^XA^XZ')
+            api.EndDocPrinter.assert_called_once_with(api.OpenPrinter.return_value)
+    @patch('core.run',return_value='device for Canon: usb://Canon\ndevice for Zebra: usb://Zebra/ZD421?serial=x')
     def test_filter(self,_):self.assertEqual(core.printers()[0][0],'Zebra');self.assertEqual(len(core.printers()),1)
 
 if __name__=='__main__':unittest.main()

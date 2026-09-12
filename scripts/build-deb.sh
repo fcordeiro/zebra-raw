@@ -16,7 +16,7 @@ Architecture: all
 Maintainer: Zebra RAW maintainers <5787523+fcordeiro@users.noreply.github.com>
 Depends: python3 (>= 3.8), python3-gi, gir1.2-gtk-3.0, cups-client
 Recommends: cups
-Description: Interface GTK para envio ZPL RAW a Zebra GC420t USB
+Description: Interface GTK para envio ZPL RAW a impressoras termicas Zebra USB
  Envia arquivos ZPL sem filtros pelo CUPS, com perfis de midia,
  configuracao termica, calibracao e consulta da fila.
 CONTROL

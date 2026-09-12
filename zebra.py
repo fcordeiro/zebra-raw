@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import json
+import os
+import sys
 import threading
 from datetime import datetime
 from dataclasses import asdict
@@ -9,9 +11,19 @@ gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib
 import core
 
+def resource_path(name):
+    """Localiza recursos tanto no pacote instalado quanto no executável Windows."""
+    base = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent))
+    return base / name
+
 class Window(Gtk.Window):
     def __init__(self):
-        super().__init__(title='Zebra RAW • GC420t')
+        super().__init__(title='Zebra RAW')
+        self.set_wmclass('zebra-raw', 'Zebra RAW')
+        try:
+            self.set_icon_from_file(str(resource_path('icons/zebra-raw.ico' if os.name == 'nt' else 'icons/zebra-raw.svg')))
+        except Exception:
+            self.set_icon_name('zebra-raw')
         self.set_default_size(900, 760)
         self.set_border_width(18)
         self.connect('destroy', Gtk.main_quit)
@@ -26,11 +38,11 @@ class Window(Gtk.Window):
         root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         self.add(root)
         title = Gtk.Label(xalign=0)
-        title.set_markup('<span size="xx-large" weight="bold">Zebra RAW</span>   GC420t · USB · 203 dpi')
+        title.set_markup('<span size="xx-large" weight="bold">Zebra RAW</span>   Impressoras térmicas Zebra')
         root.pack_start(title, False, False, 0)
         row = Gtk.Box(spacing=8)
         root.pack_start(row, False, False, 0)
-        row.pack_start(Gtk.Label(label='Impressora USB'), False, False, 0)
+        row.pack_start(Gtk.Label(label='Impressora Zebra'), False, False, 0)
         self.printer = Gtk.ComboBoxText()
         row.pack_start(self.printer, True, True, 0)
         self.button(row, 'Atualizar', self.refresh)
@@ -66,8 +78,8 @@ class Window(Gtk.Window):
         self.button(row, 'Salvar perfil local', self.save_profile)
         grid = Gtk.Grid(column_spacing=24, row_spacing=10)
         config.pack_start(grid, False, False, 0)
-        fields = [('width','Largura de impressão (mm)',1,104,.125), ('length','Comprimento da etiqueta (mm)',1,990,.125),
-                  ('speed','Velocidade (pol/s — 2 a 4)',2,4,1), ('darkness','Intensidade (0 a 30)',0,30,1),
+        fields = [('width','Largura de impressão (mm)',1,1000,.125), ('length','Comprimento da etiqueta (mm)',1,1000,.125),
+                  ('speed','Velocidade (pol/s — 1 a 14)',1,14,1), ('darkness','Intensidade (0 a 30)',0,30,1),
                   ('top','Ajuste vertical (dots)',-120,120,1), ('left','Deslocamento à esquerda (dots)',-9999,9999,1),
                   ('tear','Posição de destaque (dots)',-120,120,1)]
         for i,(key,label,low,high,step) in enumerate(fields):
@@ -75,13 +87,14 @@ class Window(Gtk.Window):
             w=Gtk.SpinButton.new_with_range(low,high,step); w.set_digits(3 if step<1 else 0)
             self.widgets[key]=w; grid.attach(w,1,i,1,1)
         for i,(key,label,options) in enumerate([
+            ('resolution','Resolução',[('8','203 dpi (8 dots/mm)'),('12','300 dpi (12 dots/mm)'),('24','600 dpi (24 dots/mm)')]),
             ('method','Método',[('T','Transferência térmica (ribbon)'),('D','Térmico direto (sem ribbon)')]),
             ('media','Detecção da mídia',[('Y','Espaço / entalhe'),('M','Marca preta'),('N','Contínua'),('A','Automática')])],len(fields)):
             grid.attach(Gtk.Label(label=label,xalign=0),0,i,1,1)
             w=Gtk.ComboBoxText()
             for code,text in options: w.append(code,text)
             self.widgets[key]=w; grid.attach(w,1,i,1,1)
-        self.note(config,'8 dots = 1 mm · Largura máxima impressa: 104 mm. A largura não redimensiona o conteúdo.\nComprimento sem o espaço entre etiquetas; em mídia com espaço o sensor determina o passo.\nModo de saída: destaque manual. Os valores são do perfil local, não uma leitura da impressora.')
+        self.note(config,'Escolha a resolução correspondente à impressora: 203 dpi = 8 dots/mm, 300 dpi = 12 dots/mm e 600 dpi = 24 dots/mm.\nA largura não redimensiona o conteúdo. Comprimento sem o espaço entre etiquetas; em mídia com espaço o sensor determina o passo.\nModo de saída: destaque manual. Confirme os limites de mídia e velocidade no manual da sua impressora; os valores são do perfil local, não uma leitura do equipamento.')
         self.persist=Gtk.CheckButton(label='Gravar também na memória da impressora (^JUS) ao aplicar')
         config.pack_start(self.persist,False,False,0)
         row=Gtk.Box(spacing=8);config.pack_start(row,False,False,0)
@@ -137,19 +150,19 @@ class Window(Gtk.Window):
     def refresh(self,*_):
         def done(rows):
             old=self.printer.get_active_id();self.printer.remove_all()
-            for name,uri in rows:self.printer.append(name,name+' — GC420t USB')
+            for name,uri in rows:self.printer.append(name,name+' — '+uri)
             self.printer.set_active_id(old or 'Zebra')
             if self.printer.get_active()<0:self.printer.set_active(0)
-            self.status.set_text('GC420t USB encontrada' if rows else 'Nenhuma fila GC420t USB encontrada no CUPS')
+            self.status.set_text('Impressora Zebra encontrada' if rows else 'Nenhuma fila Zebra encontrada')
         self.task(core.printers,done)
     def settings(self):
-        values={k:(w.get_active_id() if isinstance(w,Gtk.ComboBoxText) else w.get_value() if k in ('width','length') else w.get_value_as_int()) for k,w in self.widgets.items()}
+        values={k:(int(w.get_active_id()) if k == 'resolution' else w.get_active_id() if isinstance(w,Gtk.ComboBoxText) else w.get_value() if k in ('width','length') else w.get_value_as_int()) for k,w in self.widgets.items()}
         s=core.Settings(**values);s.validate();return s
     def load_profile(self,*_):
         try:
             name=self.profile.get_child().get_text();s=core.Settings(**self.state['profiles'][name]);s.validate()
             for key,w in self.widgets.items():
-                if isinstance(w,Gtk.ComboBoxText):w.set_active_id(getattr(s,key))
+                if isinstance(w,Gtk.ComboBoxText):w.set_active_id(str(getattr(s,key)) if key == 'resolution' else getattr(s,key))
                 else:w.set_value(getattr(s,key))
         except Exception as e:self.error(e)
     def save_profile(self,*_):
@@ -213,18 +226,18 @@ class Window(Gtk.Window):
         try:
             s=self.settings()
             if s.width<40 or s.length<25:raise ValueError('Para esta etiqueta de teste, use ao menos 40 × 25 mm.')
-            data=s.zpl()+f'^XA^FO8,8^GB{round(s.width*8)-16},{round(s.length*8)-16},2^FS^FO20,25^A0N,25,20^FDZebra GC420t^FS^FO20,65^A0N,20,16^FDRAW USB - 203 dpi^FS^FO20,100^BY2^BCN,50,N,N,N^FD123456^FS^PQ1^XZ'.encode()
+            data=s.zpl()+f'^XA^FO8,8^GB{round(s.width*s.resolution)-16},{round(s.length*s.resolution)-16},2^FS^FO20,25^A0N,25,20^FDZebra RAW^FS^FO20,65^A0N,20,16^FDImpressora termica USB^FS^FO20,100^BY2^BCN,50,N,N,N^FD123456^FS^PQ1^XZ'.encode()
             self.send(data,'Etiqueta de teste')
         except Exception as e:self.error(e)
     def queue(self,*_):
         printer=self.printer.get_active_id()
         if not printer:return self.dialog('Selecione uma impressora.')
-        self.task(lambda:core.run(['lpstat','-p',printer,'-l'])+'\n\n'+core.run(['lpstat','-o',printer]),lambda text:self.set_text(self.queue_text,text))
+        self.task(lambda:core.queue_status(printer),lambda text:self.set_text(self.queue_text,text))
     def cancel_last(self,*_):
         if not self.jobs:return self.dialog('Nenhum trabalho enviado nesta sessão.')
         job=self.jobs[-1]
         if self.dialog('Cancelar o trabalho '+job+' no CUPS?',confirm=True):
-            self.task(lambda:core.run(['cancel',job]),lambda _: (self.jobs.remove(job),self.log('Cancelado no CUPS: '+job)))
+            self.task(lambda:core.cancel_job(job),lambda _: (self.jobs.remove(job),self.log('Cancelado: '+job)))
 
 if __name__=='__main__':
     win=Window();win.show_all();Gtk.main()
