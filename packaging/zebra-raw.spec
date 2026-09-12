@@ -1,5 +1,5 @@
 Name:           zebra-raw
-Version:        1.2.2
+Version:        1.2.3
 Release:        1
 Summary:        GTK utility for RAW ZPL printing on Zebra thermal printers
 License:        LicenseRef-Proprietary
