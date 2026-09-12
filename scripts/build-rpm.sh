@@ -6,7 +6,7 @@ command -v rpmbuild >/dev/null || { echo 'Instale rpm-build para gerar o .rpm.' 
 stage=$(mktemp -d)
 trap 'rm -rf "$stage"' EXIT HUP INT TERM
 mkdir -p "$stage/SOURCES" "$stage/BUILD" "$stage/RPMS" "$stage/SPECS" "$stage/SRPMS" "$stage/zebra-raw-$version" "$root/dist"
-for file in core.py zebra.py VERSION README.md zebra-raw.desktop io.github.fcordeiro.ZebraRaw.metainfo.xml icons/zebra-raw.svg scripts/stage.sh packaging/zebra-raw; do
+for file in core.py zebra.py VERSION README.md io.github.fcordeiro.zebraraw.desktop io.github.fcordeiro.zebraraw.metainfo.xml icons/zebra-raw.svg scripts/stage.sh packaging/zebra-raw; do
     install -D -m 644 "$root/$file" "$stage/zebra-raw-$version/$file"
 done
 chmod 755 "$stage/zebra-raw-$version/scripts/stage.sh"

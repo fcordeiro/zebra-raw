@@ -8,25 +8,36 @@ from dataclasses import asdict
 from pathlib import Path
 import gi
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, GLib
+from gi.repository import Gio, Gtk, GLib
 import core
+
+APP_ID = 'io.github.fcordeiro.zebraraw'
 
 def resource_path(name):
     """Localiza recursos tanto no pacote instalado quanto no executável Windows."""
     base = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parent))
     return base / name
 
+def application_icon_path():
+    candidates = [
+        resource_path('icons/zebra-raw.ico' if os.name == 'nt' else 'icons/zebra-raw.svg'),
+        Path('/usr/share/icons/hicolor/scalable/apps/io.github.fcordeiro.zebraraw.svg'),
+    ]
+    return next((path for path in candidates if path.is_file()), None)
+
 class Window(Gtk.Window):
-    def __init__(self):
-        super().__init__(title='Zebra RAW')
-        self.set_wmclass('zebra-raw', 'Zebra RAW')
-        try:
-            self.set_icon_from_file(str(resource_path('icons/zebra-raw.ico' if os.name == 'nt' else 'icons/zebra-raw.svg')))
-        except Exception:
-            self.set_icon_name('zebra-raw')
+    def __init__(self, application=None):
+        super().__init__(application=application, title='Zebra RAW')
+        self.set_wmclass(APP_ID, APP_ID)
+        icon = application_icon_path()
+        if icon:
+            self.set_icon_from_file(str(icon))
+        else:
+            self.set_icon_name(APP_ID)
         self.set_default_size(900, 760)
         self.set_border_width(18)
-        self.connect('destroy', Gtk.main_quit)
+        if application is None:
+            self.connect('destroy', Gtk.main_quit)
         self.busy = False
         self.path = None
         self.widgets = {}
@@ -239,5 +250,22 @@ class Window(Gtk.Window):
         if self.dialog('Cancelar o trabalho '+job+' no CUPS?',confirm=True):
             self.task(lambda:core.cancel_job(job),lambda _: (self.jobs.remove(job),self.log('Cancelado: '+job)))
 
+class Application(Gtk.Application):
+    def __init__(self):
+        super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.FLAGS_NONE)
+        self.window = None
+
+    def do_startup(self):
+        Gtk.Application.do_startup(self)
+        icon = application_icon_path()
+        if icon:
+            Gtk.Window.set_default_icon_from_file(str(icon))
+
+    def do_activate(self):
+        if self.window is None:
+            self.window = Window(self)
+        self.window.show_all()
+        self.window.present()
+
 if __name__=='__main__':
-    win=Window();win.show_all();Gtk.main()
+    Application().run(sys.argv)

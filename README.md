@@ -26,8 +26,8 @@ Os instaladores geram e instalam um pacote nativo, resolvem dependências pelo g
 Os pacotes ficam em `dist/`. Para instalar um pacote já gerado:
 
 ```sh
-sudo apt install ./zebra-raw_1.2.1_all.deb
-sudo zypper install --allow-unsigned-rpm ./zebra-raw-1.2.1-1.noarch.rpm
+sudo apt install ./zebra-raw_1.2.2_all.deb
+sudo zypper install --allow-unsigned-rpm ./zebra-raw-1.2.2-1.noarch.rpm
 ```
 
 O RPM local não é assinado; a opção permite somente a instalação desse pacote sem assinatura, mantendo a verificação dos repositórios. Para remover: `sudo apt remove zebra-raw` ou `sudo zypper remove zebra-raw`. Os perfis pessoais são preservados. Atualizações são instaladas sobre a versão anterior pelo mesmo procedimento.
