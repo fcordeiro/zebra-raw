@@ -2,6 +2,7 @@
 set -eu
 python3 -m unittest discover -s tests -v
 desktop-file-validate /usr/share/applications/zebra-raw.desktop
+appstreamcli validate --no-net /usr/share/metainfo/io.github.fcordeiro.ZebraRaw.metainfo.xml
 # DISPLAY isolado: não acessa a sessão gráfica nem a impressora do usuário.
 Xvfb :97 -screen 0 1024x768x24 >/tmp/zebra-xvfb.log 2>&1 &
 xvfb_pid=$!

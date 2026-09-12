@@ -1,8 +1,10 @@
 Name:           zebra-raw
-Version:        1.2.0
+Version:        1.2.1
 Release:        1
 Summary:        GTK utility for RAW ZPL printing on Zebra thermal printers
 License:        LicenseRef-Proprietary
+Vendor:          Fernando J. Cordeiro
+Packager:        Fernando J. Cordeiro <5787523+fcordeiro@users.noreply.github.com>
 URL:            https://github.com/fcordeiro/zebra-raw
 Source0:        %{name}-%{version}.tar.gz
 BuildArch:      noarch
@@ -30,5 +32,6 @@ profiles, thermal settings, calibration and queue inspection.
 %{_bindir}/zebra-raw
 %{_datadir}/applications/zebra-raw.desktop
 %{_datadir}/icons/hicolor/scalable/apps/zebra-raw.svg
+%{_datadir}/metainfo/io.github.fcordeiro.ZebraRaw.metainfo.xml
 %dir %{_datadir}/doc/zebra-raw
 %{_datadir}/doc/zebra-raw/README.md

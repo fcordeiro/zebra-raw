@@ -19,7 +19,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/src:z" -w /src "$IMAGE" sh -ec '
             apt-get update -qq
-            DEBIAN_FRONTEND=noninteractive apt-get install -y dpkg-dev python3 python3-gi gir1.2-gtk-3.0 cups-client xvfb desktop-file-utils
+            DEBIAN_FRONTEND=noninteractive apt-get install -y appstream dpkg-dev python3 python3-gi gir1.2-gtk-3.0 cups-client xvfb desktop-file-utils
             ./scripts/build-deb.sh
             apt-get install -y --no-install-recommends ./dist/zebra-raw_$(cat VERSION)_all.deb
             ./scripts/check-package.sh
@@ -37,7 +37,7 @@ jobs:
       - name: Gerar, instalar, testar e remover RPM
         run: |
           docker run --rm -v "$PWD:/src:z" -w /src opensuse/tumbleweed sh -ec '
-            zypper --non-interactive install rpm-build tar gzip python3-gobject typelib-1_0-Gtk-3_0 cups-client xorg-x11-server-Xvfb desktop-file-utils
+            zypper --non-interactive install appstream rpm-build tar gzip python3-gobject typelib-1_0-Gtk-3_0 cups-client xorg-x11-server-Xvfb desktop-file-utils
             ./scripts/build-rpm.sh
             zypper --non-interactive install --allow-unsigned-rpm ./dist/zebra-raw-$(cat VERSION)-1.noarch.rpm
             ./scripts/check-package.sh

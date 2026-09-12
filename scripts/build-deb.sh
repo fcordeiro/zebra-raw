@@ -13,7 +13,7 @@ Version: $version
 Section: utils
 Priority: optional
 Architecture: all
-Maintainer: Zebra RAW maintainers <5787523+fcordeiro@users.noreply.github.com>
+Maintainer: Fernando J. Cordeiro <5787523+fcordeiro@users.noreply.github.com>
 Depends: python3 (>= 3.8), python3-gi, gir1.2-gtk-3.0, cups-client
 Recommends: cups
 Description: Interface GTK para envio ZPL RAW a impressoras termicas Zebra USB

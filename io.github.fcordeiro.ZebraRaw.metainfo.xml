@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.fcordeiro.ZebraRaw</id>
+  <name>Zebra RAW</name>
+  <summary>Envie etiquetas ZPL RAW para impressoras térmicas Zebra</summary>
+  <metadata_license>FSFAP</metadata_license>
+  <project_license>LicenseRef-proprietary</project_license>
+  <developer id="io.github.fcordeiro">
+    <name>Fernando J. Cordeiro</name>
+  </developer>
+  <url type="homepage">https://github.com/fcordeiro/zebra-raw</url>
+  <launchable type="desktop-id">zebra-raw.desktop</launchable>
+  <icon type="stock">zebra-raw</icon>
+  <description>
+    <p>Interface gráfica para envio direto de ZPL em modo RAW a filas de impressoras Zebra.</p>
+    <p>Inclui perfis de mídia, ajustes térmicos, calibração e consulta da fila de impressão.</p>
+  </description>
+  <categories>
+    <category>Utility</category>
+  </categories>
+  <releases>
+    <release version="1.2.1" date="2026-09-12"/>
+  </releases>
+</component>
